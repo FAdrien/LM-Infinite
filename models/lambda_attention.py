@@ -229,7 +229,7 @@ class Lambda_Attention_Matrix:
             )
             output_rot = torch.matmul(
                 self.attn[..., self.global_branch:].view(
-                    (self.attn.shape[:-2], -1, self.local_branch, self.local_branch*2)
+                    (*self.attn.shape[:-2], -1, self.local_branch, self.local_branch*2)
                 ),
                 segmented_value
             ).view(
