@@ -4,8 +4,9 @@ import torch
 def pad_sequence_to_length(tensor, length, value):
     return torch.cat(
         (tensor,
-         torch.zeros(*tensor.shape[:-2],
-                     length-tensor.shape[-2], tensor.shape[-1],
+         torch.full((*tensor.shape[:-2],
+                     length-tensor.shape[-2], tensor.shape[-1]),
+                    fill_value = value,
                      dtype=tensor.dtype
                      ).to(tensor.device)
          ), dim=-2
@@ -110,7 +111,7 @@ class Lambda_Attention_Matrix:
                 attn_rot[..., -1, -patch_size:, :] = min_value
                 attn_rot[..., -1, :, -patch_size:] = min_value
             attn_rot = attn_rot.view(
-                query_rot.shape[:-2] + (-1, local_branch*2)
+                (*query_rot.shape[:-2], -1, local_branch*2)
             )
             attn_stationary = pad_sequence_to_length(
                 attn_stationary, pad_to_length, min_value
@@ -140,7 +141,7 @@ class Lambda_Attention_Matrix:
                 attn_rot[..., -1, -patch_size:, :] = min_value
                 attn_rot[..., -1, :, -patch_size:] = min_value
             attn_rot = attn_rot.view(
-                query_rot.shape[:-2] + (-1, local_branch*2)
+                (*query_rot.shape[:-2], -1, local_branch*2)
             )
             attn_stationary = pad_sequence_to_length(
                 attn_stationary, pad_to_length, min_value
@@ -209,12 +210,11 @@ class Lambda_Attention_Matrix:
             )
             output_rot = torch.matmul(
                 self.attn[..., self.global_branch:].view(
-                    self.attn.shape[:-2] +
-                    (-1, self.local_branch, self.local_branch*2)
+                    (*self.attn.shape[:-2], -1, self.local_branch, self.local_branch*2)
                 ),
                 segmented_value
             ).view(
-                self.attn.shape[:-2] + (self.pad_to_length, -1)
+                (*self.attn.shape[:-2], self.pad_to_length, -1)
             )
             output = output_stationary + output_rot[..., :self.query_length, :]
         elif self.mode == "cached":
@@ -229,12 +229,11 @@ class Lambda_Attention_Matrix:
             )
             output_rot = torch.matmul(
                 self.attn[..., self.global_branch:].view(
-                    self.attn.shape[:-2] +
-                    (-1, self.local_branch, self.local_branch*2)
+                    (self.attn.shape[:-2], -1, self.local_branch, self.local_branch*2)
                 ),
                 segmented_value
             ).view(
-                self.attn.shape[:-2] + (self.pad_to_length, -1)
+                (*self.attn.shape[:-2], self.pad_to_length, -1)
             )
             output = output_stationary + output_rot[..., :self.query_length, :]
         else:
