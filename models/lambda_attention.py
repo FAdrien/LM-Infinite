@@ -63,7 +63,7 @@ class Lambda_Attention_Matrix:
         )
         attn_stationary = torch.where(
             torch.ones(attn_stationary.shape[-2:], dtype=torch.bool).to(
-                device).triu(-local_branch+1+key_length-query_length),
+                device).triu(-local_branch+key_length-query_length),
             min_value, attn_stationary
         )
 
@@ -100,13 +100,16 @@ class Lambda_Attention_Matrix:
             attn_rot = torch.matmul(
                 segmented_query_rot, segmented_key_rot.transpose(-1, -2)
             )
-            attn_rot = torch.where(
-                torch.ones(
+
+            mask = torch.ones(
                     (local_branch, 2*local_branch), dtype=torch.bool
-                ).to(device).triu(1).tril(local_branch).logical_not(),
+                ).to(device).triu().tril(local_branch).logical_not()
+            attn_rot = torch.where(
+                mask,
                 min_value, attn_rot
             )
-            attn_rot[..., 0, :, :local_branch] = min_value
+            attn_rot[..., 0, :local_branch, :local_branch] = min_value
+            
             if patch_size != 0:
                 attn_rot[..., -1, -patch_size:, :] = min_value
                 attn_rot[..., -1, :, -patch_size:] = min_value
@@ -117,6 +120,7 @@ class Lambda_Attention_Matrix:
                 attn_stationary, pad_to_length, min_value
             )
             self.pad_to_length = pad_to_length
+            
             self.attn = torch.cat((
                 attn_stationary, attn_rot), -1)
         elif self.mode == "cached":
